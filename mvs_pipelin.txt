@@ -1,0 +1,17 @@
+% What to be loaded:
+% Images: I_t, Camera poses: T_t, Camera projection matrix: P_t
+
+% Between each image pairs, compute a dense optical flow 
+
+% Triangulate the get an initial guess
+
+% Q: How to know the quality of the estimated flow
+%    (i.e. The initial uncertainty of a 3D point)?
+% T: 1. The Semi dense VO paper provides with a potential solution
+
+% Q: How to determine if a point has converged?
+% T: 1. Check if the variance drop below a threshold (how about scale
+% issue)
+
+% Q: How do manage converged points?
+% T: Might want to use a database for fast query etc.
