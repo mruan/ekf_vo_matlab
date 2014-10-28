@@ -30,7 +30,7 @@ classdef ekf_P3
             assert(nr==2 && nc==1, 'uv must be a col vector');
             
             % rho --> inverse depth
-            rho_mu    = 1;
+            rho_mu    = 0.5;
             rho_sigma = 1;
             
             F = R'/K;
@@ -38,7 +38,7 @@ classdef ekf_P3
             A = [-R'*t; 1];        % A-> 4x1
             
             B = [F(:,1:2); 0 0];   % B-> 4x2
-            obj.P = A*rho_sigma*A'+B*obj.Q*B';
+            obj.P = A*rho_sigma*A'+B*obj.Q*B';%+0.1*eye(4);
         end
         
         function obj = update(obj, z, K, R, t)
