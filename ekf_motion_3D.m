@@ -37,7 +37,8 @@ classdef ekf_motion_3D
             
             z = measurements(:); % rasterize to a tall column vector
             h = zeros(2*num_features, 1);
-            H = zeros(2*num_features, 6);
+            H_x = zeros(2*num_features, 3);
+            H_r = zeros(2*num_features, 3);
             % TODO: vectorize this loop
             for i=1:num_features
                 xyz = features(:, i);
@@ -50,27 +51,34 @@ classdef ekf_motion_3D
                 
                 H1 = [1/uvw(3)   0.0    -uv(1)/uvw(3);...
                         0.0    1/uvw(3) -uv(2)/uvw(3)];
+                %  
+                H2 = camera.K*[so3_alg(-fR*xyz)];
                 
-                H2 = camera.K*[so3_alg(xyz) eye(3)];
-                
-                H(2*i-1:2*i,:) = H1*H2;
+                H_r(2*i-1:2*i,:) = H1*H2;
+                H_x(2*i-1:2*i,:) = H1*camera.K;
             end
             
             % From here on R and K refer to the Kalman context
             R = sparse(diag(1.0*ones(2*num_features, 1)));
             
             y = z - h;
-            S = H*f.P*H'+ R;
-            K = f.P*H'/S;
+            S = H_r*f.P(1:3,1:3)*H_r'+ R;
+            K = f.P(1:3,1:3)*H_r'/S;
             dx = K*y;
+            
+            f.P(1:3,1:3) = (eye(3) - K*H_r)*f.P(1:3,1:3);
             
             % Note the different update rules for the states:
             screw_add =@(dx, x) screw_log(screw_exp(dx)*screw_exp(x));
-            f.X(1:3) = screw_add(dx(1:3), f.X(1:3));
-            f.X(4:6) = dx(4:6) + f.X(4:6);
+            f.X(1:3) = screw_add(dx, f.X(1:3));
+            
+            S = H_x*f.P(4:6,4:6)*H_x'+ R;
+            K = f.P(4:6,4:6)*H_x'/S;
+            dx = K*y;           
+            f.X(4:6) = dx + f.X(4:6);
             
             % Update the covariance matrix
-            f.P = (eye(6) - K*H)*f.P;
+            f.P(4:6,4:6) = (eye(3) - K*H_x)*f.P(4:6,4:6);
         end
     end
     
