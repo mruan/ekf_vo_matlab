@@ -26,5 +26,5 @@ end
 
 u = V_inv*M(1:3, 4);
 
-W = [u; so3_gla(w_hat)];
+W = [so3_gla(w_hat); u];
 end
