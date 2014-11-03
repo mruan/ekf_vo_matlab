@@ -6,7 +6,7 @@ addpath('lie_group');
 % Load simulation data:
 load('simulation/sim_01_cardioid/sim_01.mat');
 
-j = 1;
+j = 100;
 
 sdv_r = 0.05;
 sdv_t = 0.05;
@@ -18,14 +18,13 @@ cx = delta_x(4:6) + trajectory.t(:, j);
 
 gt_rx = screw_log(trajectory.R(:,:,j));
 gt_cx = trajectory.t(:, j);
-
 % Solve for the correct pose using Gauss Newton:
 ftr_j = features.where(:, measurements.feature_tags{j});
 % assume we can measure the 3D points directly:
-obs_j = features.where(:, measurements.feature_tags{j});
+obs_j = measurements.image_coords{j};
 % then add some Gaussian noise
 N = size(obs_j,2);
-obs_j = 0.02*randn(3, N) + obs_j;
+obs_j = 0.5*randn(2, N)+obs_j; % + 
 
 
 % Gauss Newton:
@@ -37,19 +36,26 @@ min_norm = 1e-7;
 converge_flag = false;
 for i=1:max_iter
    
-    h = zeros(3*N, 1);
-    H = zeros(3*N, 6);
+    h = zeros(2*N, 1);
+    H = zeros(2*N, 6);
     
     fR = screw_exp(rx);
     ft = cx;
     for j = 1:N
         xyz = ftr_j(:, j);
         
-        xyz_h = fR*xyz + ft;
+        uvw = camera.K*(fR*xyz + ft);
+                
+        uv  = uvw(1:2)./uvw(3);
         
-        h(3*j-2 :3*j, :) = xyz_h;
+        h(2*j-1 :2*j) = uv;
         
-        H(3*j-2 :3*j, :) = [so3_alg(-fR*xyz) eye(3)];        
+        H1 = [1/uvw(3)   0.0    -uv(1)/uvw(3);...
+                0.0    1/uvw(3) -uv(2)/uvw(3)];
+        
+        H2 = camera.K*[so3_alg(-fR*xyz) eye(3)];
+            
+        H(2*j-1 :2*j, :) = H1*H2;        
     end
     
     y = z - h;
@@ -74,3 +80,9 @@ rx    = rx'
 
 gt_cx = gt_cx'
 cx    = cx'
+
+%{
+gt = twist_log([trajectory.R(:,:,j) trajectory.t(:, j); 0 0 0 1])'
+
+gt = gt'+ delta_x;
+%}
