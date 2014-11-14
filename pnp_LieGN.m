@@ -1,4 +1,4 @@
-function [rx, cx, flag ] = pnp_LieGN( x3d_h, x2d_h, camera_K, rx0, cx0)
+function [rx, cx, flag ] = pnp_LieGN(x3d_h, x2d_h, camera_K, rx0, cx0)
 %PNP_LIEGN Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -22,7 +22,11 @@ for i=1:max_iter
     for j = 1:N
         xyz = x3d_h(1:3, j);
         
-        uvw = camera_K*(fR*xyz + ft);
+% 1        % When fR ft in world-to-body frame
+%         uvw = camera_K*(fR*xyz + ft);
+
+% 2      % When fR ft in body-in-world frame
+        uvw = camera_K*fR'*(xyz - ft);
         
         uv  = uvw(1:2)./uvw(3);
         
@@ -31,7 +35,11 @@ for i=1:max_iter
         H1 = [1/uvw(3)   0.0    -uv(1)/uvw(3);...
             0.0    1/uvw(3) -uv(2)/uvw(3)];
         
-        H2 = camera_K*[so3_alg(-fR*xyz) eye(3)];
+% 1       % When fR ft in world-to-body frame
+%         H2 = camera_K*[so3_alg(-fR*xyz) eye(3)];
+
+% 2      % When fR ft in body-in-world frame
+        H2 = camera_K*fR'*[so3_alg(xyz-ft) -eye(3)];
         
         H(2*j-1 :2*j, :) = H1*H2;
     end

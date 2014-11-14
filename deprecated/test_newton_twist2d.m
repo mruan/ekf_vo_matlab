@@ -1,12 +1,12 @@
 %clear;
-%rng(0);
+rng(0);
 
 addpath('lie_group');
 
 % Load simulation data:
 load('simulation/sim_01_cardioid/sim_01.mat');
 
-j = 100;
+j = 1;
 
 sdv_r = 0.05;
 sdv_t = 0.05;
@@ -24,13 +24,13 @@ ftr_j = features.where(:, measurements.feature_tags{j});
 obs_j = measurements.image_coords{j};
 % then add some Gaussian noise
 N = size(obs_j,2);
-obs_j = 0.5*randn(2, N)+obs_j; % + 
+obs_j = 0.00*randn(2, N)+obs_j; % + 
 
 
 % Gauss Newton:
 z = obs_j(:);
 
-rx0 = rx; cx0 = cx;
+rx = rx; cx = cx;
 max_iter = 200;
 min_norm = 1e-7;
 converge_flag = false;
@@ -80,6 +80,35 @@ rx    = rx'
 
 gt_cx = gt_cx'
 cx    = cx'
+
+% Calculate RMS:
+fR = screw_exp(rx);
+ft = cx';
+fR_gt = screw_exp(gt_rx);
+ft_gt = gt_cx';
+h_gt = zeros(2*N, 1);
+for j = 1:N
+    xyz = ftr_j(:, j);
+    
+    uvw = camera.K*(fR*xyz + ft);
+    uv  = uvw(1:2)./uvw(3);
+    
+    uvw_gt = camera.K*(fR_gt*xyz + ft_gt);
+    uv_gt = uvw_gt(1:2)./uvw_gt(3);
+    
+    h(2*j-1 :2*j) = uv;
+    h_gt(2*j-1 :2*j) = uv_gt;
+end
+
+rms_est = rms(z-h)
+rms_gt  = rms(z-h_gt)
+
+%% Plot results on image
+% z: noisy observations
+% h: projections with estimated extrinsic parameters
+% h_gt: projections with true extrinsic parameters
+plot(z(1:2:end), z(2:2:end), 'bo', h(1:2:end), h(2:2:end), 'rx', h_gt(1:2:end), h_gt(2:2:end), 'bx');
+axis([0 camera.width 0 camera.height]);
 
 %{
 gt = twist_log([trajectory.R(:,:,j) trajectory.t(:, j); 0 0 0 1])'
