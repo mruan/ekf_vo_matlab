@@ -15,8 +15,8 @@ classdef autocalibration_naive
         vt = 10:12;
         nt = 13:15
         at = 16:18;
-        rbi = 19:21;
-        cbi = 22:24;
+        ric = 19:21;
+        cic = 22:24;
     end
     
     methods
@@ -29,6 +29,7 @@ classdef autocalibration_naive
                 f.X = varargin{1};
                 f.P = varargin{2};
             end
+            f.time_stamp = 0;
         end
         
         function f = onImuUpdate(f, w, a, new_time_stamp)
@@ -38,18 +39,25 @@ classdef autocalibration_naive
             %{
             y_imu = [   wt   ] + [ imu_wt_noise ]
                     [   at   ]   [ imu_at_noise ]
+            but
+            y_pre = [   wt   ]
+                    [R'*at   ]
             %}
             H = zeros(6, 24);
-            H(1:3, f.wt) = eye(3);
-            H(4:6, f.at) = eye(3);
+            R = screw_exp(f.X(f.rx));
+            a_pred = R'*f.X(f.at);
             
-            y = [w-f.wt;...
-                 a-f.wt];
+            H(1:3, f.wt) = eye(3);
+            H(4:6, f.rx) = so3_alg(a_pred)*R'; % see test_diff_so3
+            H(4:6, f.at) = R';
+            
+            y = [w - f.X(f.wt);...
+                 a -   a_pred];
             S = H*f.P*H' + R_imu;
             K = f.P*H'/S;
             dx= K*y;
             
-            f.X(f.rx) = screw_add(f.X(f.rx), dx(f.rx));
+            f.X(f.rx) = screw_add(dx(f.rx), f.X(f.rx));
             f.X(4:end)= f(4:end) + dx(4:end);
             f.P = f.P - K*H*f.P;
         end
@@ -76,7 +84,7 @@ classdef autocalibration_naive
             K = f.P*H'/S;
             dx= K*y;
             
-            f.X(f.rx) = screw_add(f.X(f.rx), dx(f.rx));
+            f.X(f.rx) = screw_add(dx(f.rx), f.X(f.rx));
             f.X(4:end)= f(4:end) + dx(4:end);
             f.P = f.P - K*H*f.P;
         end
@@ -98,14 +106,14 @@ classdef autocalibration_naive
             % Linearized model:
             %{
                F =
-                 [I  0  R*dt  0    0   0    0  0]
-                 [0  I   0   I*dt  0   0    0  0]
-                 [0  0   I    0   I*dt 0    0  0]
-                 [0  0   0    I    0   I*dt 0  0]
-                 [0  0   0    0    I   0    0  0]
-                 [0  0   0    0    0   I    0  0]
-                 [0  0   0    0    0   0    I  0]
-                 [0  0   0    0    0   0    0  I]
+                 [I   0   R*dt  0    0    0    0   0]
+                 [0   I    0   I*dt  0    0    0   0]
+                 [0   0    I    0   I*dt  0    0   0]
+                 [0   0    0    I    0   I*dt  0   0]
+                 [0   0    0    0    I    0    0   0]
+                 [0   0    0    0    0    I    0   0]
+                 [0   0    0    0    0    0    I   0]
+                 [0   0    0    0    0    0    0   I]
             %}
             F = eye(24);
             F(f.rx, f.wt) = R*dt;
@@ -113,8 +121,8 @@ classdef autocalibration_naive
             F(f.wt, f.nt) = eye(3)*dt;
             F(f.vt, f.at) = eye(3)*dt;
             
-            angular_noise = 5e-3; % 5mm/s^2
-            linear_noise  = 5e-3; % 5mm/s^2;
+            angular_noise = 1e-3; % 5mm/s^2
+            linear_noise  = 1e-3; % 5mm/s^2;
             Q_prop = zeros(24);
             Q_prop(f.nt, f.nt) = angular_noise^2*eye(3);
             Q_prop(f.at, f.at) =  linear_noise^2*eye(3);
