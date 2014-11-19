@@ -1,4 +1,4 @@
-function test_naive2
+function [f] = test_naive2()
 
 % Add path
 addpath('../../lie_group');
@@ -18,18 +18,18 @@ end
 X_init = zeros(24,1);
 X_init( 1: 3) = full_states.rx(:,1);
 X_init( 4: 6) = full_states.tx(:,1);
-X_init( 7: 9) = full_states.wt(:,1);
+% X_init( 7: 9) = full_states.wt(:,1);
 R_im = screw_exp(X_init(1:3));
 X_init(10:12) = R_im*full_states.vt(:,1);
-X_init(16:18) = R_im*full_states.at(:,1); % TODO:
+%X_init(16:18) = R_im*full_states.at(:,1); % TODO:
 X_init(19:21) = [pi 0 0]';
 X_init(22:24) = [0 0 0]';
 
 P_rx = 0.0*eye(3);
 P_cx = 0.0*eye(3);
-P_wt = 0.0*eye(3);
+P_wt = 10.0*eye(3);
 P_vt = 0.0*eye(3);
-P_at = 0.0*eye(3);
+P_at = 10.0*eye(3);
 P_nt = 0.01^2*eye(3);
 P_rxic = 0.02^2*eye(3);
 P_cxic = 0.02^2*eye(3);
