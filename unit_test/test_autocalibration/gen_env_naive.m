@@ -11,7 +11,7 @@ function [full_states, measurement] = gen_env_naive( )
 %      (i.e. correct for drift, exclude gravity and etc)
 
 dt = 0.01;  % 100 Hz
-t_end = 25; % 60 seconds
+t_end = 60; % 60 seconds
 time_series = 0:dt:t_end;
 
 % Trajecotry control paramters:
@@ -34,13 +34,13 @@ function [a, a_dot, a_ddot] = time2param(t)
     omega = pi/10;
     C0 = pi/6;
     C1 = pi/3;
-%     a = 1.5*omega*t + sin(omega*t+C0) + C1;
-%     a_dot  = omega*(1.5+cos(omega*t+C0));   % always positive
-%     a_ddot = -omega^2*sin(omega*t+C0);
+    a = 1.5*omega*t + sin(omega*t+C0) + C1;
+    a_dot  = omega*(1.5+cos(omega*t+C0));   % always positive
+    a_ddot = -omega^2*sin(omega*t+C0);
 
-    a = omega*t;
-    a_dot = omega*ones(size(t));
-    a_ddot= zeros(size(t));
+%     a = omega*t;
+%     a_dot = omega*ones(size(t));
+%     a_ddot= zeros(size(t));
 end
 
 % Set up the full states, which capsulate:
@@ -96,7 +96,7 @@ function [measurement] = gen_measurement(t_end)
     measurement.TimeStamp = [];
     measurement.Data = [];
     
-    imu_t = 0.0;
+    imu_t = IMU_DT; % slight offset
     cam_t = 0.0;
     
     while imu_t < t_end && cam_t < t_end
@@ -110,7 +110,7 @@ function [measurement] = gen_measurement(t_end)
             [~, a_dot, a_ddot] = time2param(imu_t);
             
             wt = [-1 0 1]/sqrt(2)*a_dot;
-            at = [0 -r 0]*a_ddot + [-r 0 -r]/sqrt(2)*a_dot*a_dot;
+            at = [0 r 0]*a_ddot + [-r 0 -r]/sqrt(2)*a_dot*a_dot;
             
             measurement.Data(end+1,:) = [wt at];
             imu_t = imu_t + IMU_DT;
@@ -129,7 +129,7 @@ function [measurement] = gen_measurement(t_end)
             Tc = Rb*Tbc + Tb;
             rc = screw_log(Rc);
             
-            measurement.Type(end+1) = 0;
+            measurement.Type(end+1) = 1;
             measurement.TimeStamp(end+1) = cam_t;
             measurement.Data(end+1,:) = [rc; Tc]';
             cam_t = cam_t + CAM_DT;
