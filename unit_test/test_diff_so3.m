@@ -30,3 +30,4 @@ end
 Hn
 
 so3_alg(Rx'*a)*Rx'
+Rx'*so3_alg(a)
