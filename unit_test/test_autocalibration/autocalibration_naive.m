@@ -3,20 +3,23 @@ classdef autocalibration_naive
     %   Detailed explanation goes here
     
     properties
-        X; % [rx cx v w a rbi cbi]
+        X; % [rx cx v w a rbc cbc]
         P;
         time_stamp; % current time in seconds
     end
     
     properties(Constant)
         rx = 1:3;
-        cx = 4:6;
+        tx = 4:6;
         wt = 7:9;
         vt = 10:12;
         nt = 13:15
         at = 16:18;
-        rbc = 19:21;
+        rbc = 19:21;  % TODO: change to d_rbc
         tbc = 22:24;
+        Rbc_mean = [1  0  0;...
+                    0 -1  0;...
+                    0  0 -1];
     end
     
     methods
@@ -48,7 +51,7 @@ classdef autocalibration_naive
             a_pred = Rx'*f.X(f.at);
             
             H(1:3, f.wt) = eye(3);
-            H(4:6, f.rx) = so3_alg(a_pred)*Rx'; % see test_diff_so3
+%             H(4:6, f.rx) = so3_alg(a_pred)*Rx'; % see test_diff_so3
             H(4:6, f.at) = Rx';
             
             y = [w - f.X(f.wt);...
@@ -63,29 +66,41 @@ classdef autocalibration_naive
         end
 
         % TODO: Consider iterate this step as in IEKF:
-        function f = onCamUpdate(f, rx_sc, cx_sc, R_cam, time_stamp)
+        function f = onCamUpdate(f, r_sc, t_sc, R_cam, time_stamp)
             % Propagate to current time stamp
             f = propagate(f, time_stamp);
 
             %{
             y_cam = [  rx_sc  ] + [ cam_rx_noise ]
                     [  cx_sc  ]   [ cam_cx_noise ]
-            where exp(rx_sc) = exp(rx_si)*exp(rx_ic)
-                      cx_sc  = exp(rx_si)*cx_ic + cx_si
+            R_bc = exp(d_rx_bc)*Rbc_mean;
+            where exp(rx_sc) = exp(rx_sb)*exp(d_rx_bc)*Rbc_mean
+                      cx_sc  = exp(rx_sb)*tx_bc + tx_sb
             %}
+            R_sb = screw_exp(f.X(f.rx));
+            idx_rcb = 1:3;
+            idx_tcb = 4:6;
             H = zeros(6, 24);
-            H(1:3, f.rx) = eye(3);
-            H(4:6, f.rx) = so3_alg(-R*cx_ic);
-            H(4:6, f.cx) = eye(3);
+            H(idx_rcb, f.rx)  = eye(3);
+            H(idx_rcb, f.rbc) = R_sb;
+            H(idx_tcb, f.rx)  = so3_alg(-R_sb*f.X(f.tbc));
+            H(idx_tcb, f.tx)  = eye(3);
+            H(idx_tcb, f.tbc) = R_sb;
             
-            y = [screw_add(rx_sc, -rx_sc_pred); ...
-                           cx_sc - cx_sc_pred];
+            R_sc_pred = R_sb*screw_exp(f.X(f.rbc))*f.Rbc_mean;
+%             r_sc_pred = screw_log(R_sc_pred);
+            t_sc_pred = R_sb*f.X(f.tbc) + f.X(f.tx);
+            %screw_add(r_sc, -r_sc_pred)
+            y = [screw_log(screw_exp(r_sc)*R_sc_pred');...
+                 t_sc-t_sc_pred];
             S = H*f.P*H' + R_cam;
             K = f.P*H'/S;
             dx= K*y;
             
             f.X(f.rx) = screw_add(dx(f.rx), f.X(f.rx));
-            f.X(4:end)= f(4:end) + dx(4:end);
+            f.X(4:18) = dx(4:18)  + f.X(4:18); % tx ~ at fields
+            f.X(f.rbc)= screw_add(dx(f.rbc),f.X(f.rbc));
+            f.X(f.tbc)= dx(f.tbc) + f.X(f.tbc);
             f.P = f.P - K*H*f.P;
         end
         
@@ -99,7 +114,7 @@ classdef autocalibration_naive
             
             R = screw_exp(f.X(f.rx));
             f.X(f.rx) = screw_log(R*screw_exp(f.X(f.wt)*dt));
-            f.X(f.cx) = f.X(f.cx) + f.X(f.vt)*dt;
+            f.X(f.tx) = f.X(f.tx) + f.X(f.vt)*dt;
             f.X(f.wt) = f.X(f.wt) + f.X(f.nt)*dt;
             f.X(f.vt) = f.X(f.vt) + f.X(f.at)*dt;
             
@@ -117,16 +132,17 @@ classdef autocalibration_naive
                  [0   0    0    0    0    0    0   I]
             %}
             F = eye(24);
-            F(f.rx, f.wt) = R*dt;
-            F(f.cx, f.vt) = eye(3)*dt;
+            F(f.rx, f.wt) = R*dt;      %F(f.rx, f.nt) = 0.5*R*dt*dt;
+            F(f.tx, f.vt) = eye(3)*dt; %F(f.tx, f.at) = 0.5*eye(3)*dt*dt;
             F(f.wt, f.nt) = eye(3)*dt;
             F(f.vt, f.at) = eye(3)*dt;
             
-            angular_noise = 1e-2; % 5mm/s^2
-            linear_noise  = 1e-2; % 5mm/s^2;
+            % Uncertainty level proportional to dt
+            angular_noise = 1*dt;
+            linear_noise  = 1*dt;
             Q_prop = zeros(24);
-            Q_prop(f.nt, f.nt) = angular_noise^2*eye(3);
-            Q_prop(f.at, f.at) =  linear_noise^2*eye(3);
+            Q_prop(f.nt, f.nt) = angular_noise*eye(3);
+            Q_prop(f.at, f.at) =  linear_noise*eye(3);
             
             f.P = F*f.P*F' + Q_prop;
             f.time_stamp = new_time_stamp;

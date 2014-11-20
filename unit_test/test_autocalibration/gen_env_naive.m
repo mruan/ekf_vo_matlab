@@ -11,7 +11,7 @@ function [full_states, measurement] = gen_env_naive( )
 %      (i.e. correct for drift, exclude gravity and etc)
 
 dt = 0.01;  % 100 Hz
-t_end = 10; % 60 seconds
+t_end = 60; % 60 seconds
 time_series = 0:dt:t_end;
 
 % Trajecotry control paramters:
@@ -54,31 +54,18 @@ num_steps = numel(t);
 
 [a, a_dot, a_ddot] = time2param(t);
 
-zero_row = zeros(1, num_steps);
 full_states.t  = t;
 full_states.a  = a;
 full_states.ad = a_dot;
 full_states.aD = a_ddot;
-full_states.tx = [r*cos(a);...
-                  zero_row;...
-                  r*sin(a)];
-full_states.wt = [-a_dot/sqrt(2);...
-                        zero_row;...
-                   a_dot/sqrt(2)];
-full_states.vt = [zero_row;...
-                   r*a_dot;...
-                  zero_row]; 
-full_states.at = [-r/sqrt(2)*a_dot.^2;...
-                             r*a_ddot;...              
-                  -r/sqrt(2)*a_dot.^2];
+full_states.tx = get_T (r, a);
+full_states.vt = get_vt(r, a, a_dot); 
+full_states.at = get_at(r, a, a_dot, a_ddot);
+full_states.wt = get_wt(a, a_dot);
 
 full_states.rx = zeros(3, num_steps);
 for i=1:num_steps
-    sa = sin(a(i)); ca = cos(a(i));
-    R  = [ca/sqrt(2), -sa, ca/sqrt(2);...
-           1/sqrt(2),   0, -1/sqrt(2);...
-          sa/sqrt(2),  ca, sa/sqrt(2)];
-    
+    R = get_R(a(i));
     full_states.rx(:, i) = screw_log(R);
 end % end of for
 
@@ -87,7 +74,8 @@ end % end of FUNCTION:gen_full_states()
 % Measurement has 3 fields: TimeStamp, Type and Data
 % TimeStamp: Time the observation becomes available
 % Type(int): 0 for imu, 1 for camera
-% Data(6x1): [w a] for imu, [rx tx] for camera 
+% Data(1x6): [w a]' for imu, [rx tx]' for camera
+% Cheat(15x1): [rx(1-3) tx(4-6) wt(7-9) vt(10-12) at(13-15)]
 function [measurement] = gen_measurement(t_end)
     IMU_DT = 0.01; % 100 Hz
     CAM_DT = 1/30; %  30 Hz
@@ -95,6 +83,7 @@ function [measurement] = gen_measurement(t_end)
     measurement.Type = [];
     measurement.TimeStamp = [];
     measurement.Data = [];
+    measurement.Cheat = [];
     
     imu_t = IMU_DT; % slight offset
     cam_t = 0.0;
@@ -102,40 +91,91 @@ function [measurement] = gen_measurement(t_end)
     while imu_t < t_end && cam_t < t_end
         
         % it possible that both sensors update at the same time
-        if imu_t <= cam_t
-
-            measurement.Type(end+1) = 0;
+        if imu_t <= cam_t            
+            [a, a_dot, a_ddot] = time2param(imu_t);
+            
+            % Used in data
+            wt = get_wt(a, a_dot);
+            at = get_at(r, a, a_dot, a_ddot);
+            
+            % Used in cheats
+            Rb = get_R(a); 
+            rb = screw_log(Rb);
+            Tb = get_T(r, a);
+            Td = get_Tdot(r, a, a_dot);
+            Tdd= Rb*at;
+            
+            measurement.Type(end+1)      = 0;
             measurement.TimeStamp(end+1) = imu_t;
-            
-            [~, a_dot, a_ddot] = time2param(imu_t);
-            
-            wt = [-1 0 1]/sqrt(2)*a_dot;
-            at = [0 r 0]*a_ddot + [-r 0 -r]/sqrt(2)*a_dot*a_dot;
-            
-            measurement.Data(end+1,:) = [wt at];
+            measurement.Data(end+1,:)    = [wt; at]';
+            measurement.Cheat(end+1,:)   = [rb; Tb; wt; Td; Tdd]';
+
             imu_t = imu_t + IMU_DT;
-        end
-        
-        if cam_t <= imu_t
+        else
             
-            [a, ~, ~] = time2param(cam_t);
-            sa = sin(a); ca = cos(a);
-            Rb = [ca/sqrt(2), -sa, ca/sqrt(2);...
-                   1/sqrt(2),   0, -1/sqrt(2);...
-                  sa/sqrt(2),  ca, sa/sqrt(2)];
-            Tb = r*[ca; 0; sa];
+            [a, a_dot, a_ddot] = time2param(cam_t);
             
-            Rc = Rb*Rbc;
-            Tc = Rb*Tbc + Tb;
+            % Used in data
+            Rb = get_R(a);
+            Tb = get_T(r, a);
+            
+            Rc = Rb*Rbc;        % Camera orientation
             rc = screw_log(Rc);
+            Tc = Rb*Tbc + Tb;   % Camera position
+
+            % Used in cheat
+            rb = screw_log(Rb);
+            Td = get_Tdot(r, a, a_dot);
+            wt = get_wt(a, a_dot);
+            Tdd= Rb*get_at(r, a, a_dot, a_ddot);
             
-            measurement.Type(end+1) = 1;
+            measurement.Type(end+1)      = 1;
             measurement.TimeStamp(end+1) = cam_t;
-            measurement.Data(end+1,:) = [rc; Tc]';
+            measurement.Data(end+1,:)    = [rc; Tc]';            
+            measurement.Cheat(end+1,:)   = [rb; Tb; wt; Td; Tdd]';
+            
             cam_t = cam_t + CAM_DT;
         end
     end
+    
 end % end of FUNCTION:gen_measurement()
+
+function [T] = get_T(r, a)
+    T = [cos(a);...
+            0*a;...
+         sin(a)]*r;
+end
+
+function [Td] = get_Tdot(r, a, a_dot)
+    Td = [-sin(a); ...
+              0*a; ...
+           cos(a)]*r.*a_dot;
+end
+
+function [R] = get_R(a)
+    sa = sin(a); ca = cos(a);
+    R  = [ca/sqrt(2), -sa, ca/sqrt(2);...
+           1/sqrt(2),   0, -1/sqrt(2);...
+          sa/sqrt(2),  ca, sa/sqrt(2)];
+end
+
+function [vt] = get_vt(r, a, a_dot)
+    vt = [    0*a; ...
+          r*a_dot; ...
+              0*a];
+end
+
+function [wt] = get_wt(a, a_dot)
+    wt = [-1*a_dot;...
+           0*a_dot;...
+           1*a_dot]/sqrt(2);            
+end
+
+function [at] = get_at(r, a, a_dot, a_ddot)
+    at = [-a_dot.*a_dot/sqrt(2);...
+                         a_ddot;...
+          -a_dot.*a_dot/sqrt(2)]*r;
+end
 
 end % end of CODE
 
@@ -201,6 +241,11 @@ a_sb_b = v_sb_b_dot + w_sb_b_x * v_sb_b=
 [ 0]             [-1]
 [ 1]*r*a_ddot +  [ 0]/sqrt(2)*r*a_dot^2
 [ 0]             [-1]
+(in terminal:)
+a_sb_b = [
+[-a_dot.*a_dot/sqrt(2);...
+                a_ddot;...
+ -a_dot.*a_dot/sqrt(2)]]*r
 
 Measurements:
 y_imu = [w_sb^b; a_sb^b] + N(0, Q_imu)

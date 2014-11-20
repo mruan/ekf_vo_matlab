@@ -28,7 +28,7 @@ classdef iekf_pose_2d
            num_pts = size(observes, 2);
 
            z = observes(:);
-           R = 1.0*eye(2*num_pts);  % image measurement noise
+           R = 5.0*eye(2*num_pts);  % image measurement noise
            
            Rx0 = screw_exp(f.X(1:3));
            Tx0 = f.X(4:6);

@@ -1,3 +1,11 @@
+% Naive test2: Test IMU Kalman Filter
+% Tasks:
+% 1. We know the starting states (except angular acceleration), given the
+% imu measurements, can we reconstruct the trajectory?
+% 2. How does the covariance of the states evolve?
+% 2. Can I add gravity into the state?
+% 3. Can I add sensor bias into the state?
+
 function [f] = test_naive2()
 
 % Add path
@@ -44,10 +52,10 @@ num_meas = numel(measurement.TimeStamp);
 imu_meas_idx = measurement.Type==0;
 t_meas = measurement.TimeStamp(imu_meas_idx);
 num_imu_meas = numel(t_meas);
-rx_it = zeros(3, num_imu_meas);
-cx_it = zeros(3, num_imu_meas);
-wt_it = zeros(3, num_imu_meas);
-at_it = zeros(3, num_imu_meas);
+rx_it = zeros(3, num_imu_meas); rx_p = zeros(3, num_imu_meas);
+tx_it = zeros(3, num_imu_meas); tx_p = zeros(3, num_imu_meas);
+wt_it = zeros(3, num_imu_meas); wt_p = zeros(3, num_imu_meas);
+at_it = zeros(3, num_imu_meas); at_p = zeros(3, num_imu_meas);
 j = 1;
 %% Start the simulation
 for i=1:num_meas
@@ -58,23 +66,36 @@ for i=1:num_meas
 
         f = f.onImuUpdate(w, a, R_imu, measurement.TimeStamp(i));
         
-        rx_it(:, j) = f.X(f.rx);
-        cx_it(:, j) = f.X(f.cx);
-        wt_it(:, j) = f.X(f.wt);
-        at_it(:, j) = f.X(f.at);
+        p = diag(f.P);
+        rx_it(:, j) = f.X(f.rx); rx_p(:, j) = p(f.rx);
+        tx_it(:, j) = f.X(f.tx); tx_p(:, j) = p(f.tx);
+        wt_it(:, j) = f.X(f.wt); wt_p(:, j) = p(f.wt);
+        at_it(:, j) = f.X(f.at); at_p(:, j) = p(f.at);
+        
         j = j+1;
     end
 end
 
 figure(2); clf;
 subplot(2,2,1); plot_data(t, full_states.rx, t_meas, rx_it); title('rx');
-subplot(2,2,2); plot_data(t, full_states.tx, t_meas, cx_it); title('tx');
+subplot(2,2,2); plot1(t_meas, rx_p);
 
-subplot(2,2,3); plot_data(t, full_states.wt, t_meas, wt_it); title('wt');
-subplot(2,2,4); plot_data(t, at_gt, t_meas, at_it);          title('at');
+subplot(2,2,3); plot_data(t, full_states.tx, t_meas, tx_it); title('tx');
+subplot(2,2,4); plot1(t_meas, tx_p);
+
+% figure(2); clf;
+% subplot(2,2,1); plot_data(t, full_states.rx, t_meas, rx_it); title('rx');
+% subplot(2,2,2); plot_data(t, full_states.tx, t_meas, tx_it); title('tx');
+
+% subplot(2,2,3); plot_data(t, full_states.wt, t_meas, wt_it); title('wt');
+% subplot(2,2,4); plot_data(t, at_gt, t_meas, at_it);          title('at');
 end
 
 function [] = plot_data(t1, x1, t2, x2)
 plot(t1, x1(1,:), 'r-', t1, x1(2,:), 'g-', t1, x1(3,:), 'b-'); hold on;
 plot(t2, x2(1,:), 'r-.', t2, x2(2,:), 'g-.', t2, x2(3,:), 'b-.'); hold off;
+end
+
+function [] = plot1(t1, x1)
+plot(t1, x1(1,:), 'r-', t1, x1(2,:), 'g-', t1, x1(3,:), 'b-');
 end
