@@ -13,20 +13,20 @@ classdef ekf_autocalib
        tsb = 4:6;
        wt  = 7:9;
        vt  = 10:12;
-       nt  = 13:15;
-       at  = 16:18;
+%        nt  = 13:15;
+       at  = 13:15;
        % Cam related -> should be locked after calibration
-       rbc = 19:21; % orientation of camera in body(IMU) frame
-       tbc = 22:24; % position    of camera in body(IMU) frame
+       rbc = 16:18; % orientation of camera in body(IMU) frame
+       tbc = 19:21; % position    of camera in body(IMU) frame
 %        % IMU related
 %        g0  = 25:27; % gravity vector
 %        wb  = 28:30; % w-bias
 %        ab  = 31:33; % a-bias
-       nonSO3 = [4:18 22:24];
-       N_states = 24;
+       nonSO3 = [4:15 19:21];
+       N_states = 21;
        Rbc_mean = [1 0 0; 0 -1 0; 0 0 -1];
-       max_iter = 25;
-       dx_threshold = 1e-4;
+       max_iter = 10;
+       dx_threshold = 1e-6;
     end
     
     methods
@@ -150,7 +150,7 @@ classdef ekf_autocalib
             
             f.X(f.rsb) = screw_log(R_sb*screw_exp(f.X(f.wt)*dt));
             f.X(f.tsb) = f.X(f.tsb) + f.X(f.vt) * dt;
-            f.X(f.wt)  = f.X(f.wt)  + f.X(f.nt) * dt;
+            f.X(f.wt)  = f.X(f.wt);%  + f.X(f.nt) * dt;
             f.X(f.vt)  = f.X(f.vt)  + f.X(f.at) * dt;
             
             % Linearized model:
@@ -173,21 +173,22 @@ classdef ekf_autocalib
             
             F = sparse(eye(f.N_states));
             eye3 = eye(3);
-            F(f.rsb, f.wt) = R_sb*dt; F(f.rsb, f.nt) = R_sb*dt*dt/2;
-            F(f.tsb, f.vt) = eye3*dt; F(f.tsb, f.at) = eye3*dt*dt/2;
+            F(f.rsb, f.wt) = R_sb*dt; %F(f.rsb, f.nt) = R_sb*dt*dt/2;
+            F(f.tsb, f.vt) = eye3*dt; %F(f.tsb, f.at) = eye3*dt*dt/2;
             F(f.vt,  f.at) = eye3*dt;
-            F(f.wt,  f.nt) = eye3*dt;
+%             F(f.wt,  f.nt) = eye3*dt;
             
             % Uncertainty level proportional to dt:
-            nt_noise = 100;
-            at_noise = 100;
-            g0_noise = 1;
-            wb_noise = 1;
-            ab_noise = 1;
-            rbc_noise= 1;
-            tbc_noise= 1;
-            Q_prop = sparse(zeros(33));
-            Q_prop(f.nt, f.nt) = nt_noise*eye3;
+            wt_noise = 100*dt;
+            at_noise = 100*dt;
+            g0_noise = 1*dt;
+            wb_noise = 1*dt;
+            ab_noise = 1*dt;
+            rbc_noise= 0*dt;
+            tbc_noise= 0*dt;
+            Q_prop = sparse(zeros(f.N_states));
+%             Q_prop(f.nt, f.nt) = nt_noise*eye3;
+            Q_prop(f.wt, f.wt) = wt_noise*eye3;
             Q_prop(f.at, f.at) = at_noise*eye3;
             Q_prop(f.rbc,f.rbc)=rbc_noise*eye3;
             Q_prop(f.tbc,f.tbc)=tbc_noise*eye3;
@@ -195,13 +196,13 @@ classdef ekf_autocalib
 %             Q_prop(f.wb, f.wb) = wb_noise*eye3;
 %             Q_prop(f.ab, f.ab) = ab_noise*eye3;
             
-            f.P = F*(f.P+ Q_prop)*F';
+            f.P = F*(f.P + Q_prop)*F';
             f.time_stamp = new_time;
         end
 
         function [x] = states_add(f, x, dx)
            x(f.rsb) = screw_add(dx(f.rsb), x(f.rsb));
-           x(f.rbc) = screw_add(dx(f.rbc), x(f.rbc));
+           x(f.rbc) = screw_add(x(f.rbc), dx(f.rbc));
            x(f.nonSO3) = dx(f.nonSO3) + x(f.nonSO3); 
         end
     end     

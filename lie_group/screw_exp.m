@@ -5,7 +5,7 @@ nw  = sqrt(nw2);
 
 wx = so3_alg(w);
 
-if nw < 1e-1
+if nw < 1e-3
     R = eye(3) + wx + 0.5 * wx * wx;
 else
     R = eye(3) + (sin(nw)/nw)*wx + (1-cos(nw))/nw2 * wx * wx;

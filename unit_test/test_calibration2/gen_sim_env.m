@@ -13,7 +13,7 @@ function [measurement] = gen_sim_env( )
 dbstop if error
 
 %dt = 0.01;  % 100 Hz
-t_end = 20; % 60 seconds
+t_end = 80; % 60 seconds
 % time_series = 0:dt:t_end;
 
 % Trajecotry control paramters:
@@ -23,6 +23,7 @@ r = 1;
 Rbc = [1  0  0;...
        0 -1  0;...
        0  0 -1]; % rbc -> [pi 0 0];
+rbc = [0.0 0.0 0.0]';
 Tbc = [0.01; 0.03; -0.003];     
 
 % Gravity vector
@@ -67,14 +68,14 @@ while imu_t < t_end || cam_t < t_end
        Td = get_Tdot(r, a, ad);
        TD = get_Tddot(r, a, ad, aD);
        
-       measurement.Data(end+1, :) = [wt+wb; at-Rb'*g0+ab]';
-       measurement.True(end+1, :) = [rb; Tb; wt; Td; TD];
+       measurement.Data(end+1, :) = [wt; at]';%+[wb; -Rb'*g0+ab]';
+       measurement.True(end+1, :) = [rb; Tb; wt; Td; TD; rbc; Tbc];
        measurement.Type(end+1) = 0;
        measurement.Time(end+1) = imu_t;
        
        imu_t = imu_t + IMU_DT;
     else
-        [a, ad, aD] = time2param(imu_t);
+        [a, ad, aD] = time2param(cam_t);
         %{
             y_cam = [  rx_sc  ]
                     [  cx_sc  ]
@@ -95,7 +96,7 @@ while imu_t < t_end || cam_t < t_end
         TD = get_Tddot(r, a, ad, aD);
         
         measurement.Data(end+1, :) = [rc; Tc]';
-        measurement.True(end+1, :) = [rb; Tb; wt; Td; TD];
+        measurement.True(end+1, :) = [rb; Tb; wt; Td; TD; rbc; Tbc];
         measurement.Type(end+1) = 1;
         measurement.Time(end+1) = cam_t;
         
