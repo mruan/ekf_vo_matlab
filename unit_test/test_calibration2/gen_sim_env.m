@@ -13,7 +13,7 @@ function [measurement] = gen_sim_env( )
 dbstop if error
 
 %dt = 0.01;  % 100 Hz
-t_end = 10; % 60 seconds
+t_end = 20; % 60 seconds
 % time_series = 0:dt:t_end;
 
 % Trajecotry control paramters:
@@ -47,7 +47,7 @@ measurement.Time = [];
 measurement.Data = [];
 
 imu_t = 0.0;
-cam_t = 90.0;
+cam_t = 0.0;
 
 while imu_t < t_end || cam_t < t_end
    
@@ -67,7 +67,7 @@ while imu_t < t_end || cam_t < t_end
        Td = get_Tdot(r, a, ad);
        TD = get_Tddot(r, a, ad, aD);
        
-       measurement.Data(end+1, :) = [wt+wb; Rb'*(at-g0)+ab]';
+       measurement.Data(end+1, :) = [wt+wb; at-Rb'*g0+ab]';
        measurement.True(end+1, :) = [rb; Tb; wt; Td; TD];
        measurement.Type(end+1) = 0;
        measurement.Time(end+1) = imu_t;
