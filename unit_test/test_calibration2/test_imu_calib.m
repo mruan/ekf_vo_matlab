@@ -17,14 +17,18 @@ vt = zeros(3, N);
 at = zeros(3, N);
 rbc= zeros(3, N);
 tbc= zeros(3, N);
+% g0 = zeros(3, N);
+wb = zeros(3, N);
+ab = zeros(3, N);
 
 f = ekf_autocalib();
 f.X(f.rsb) = measurement.True(1, 1:3)'; f.P(f.rsb, f.rsb) = 1e-2*eye(3);
 f.X(f.tsb) = measurement.True(1, 4:6)'; f.P(f.tsb, f.tsb) = 1e-2*eye(3);
-% f.X(f.wt)  = measurement.True(1, 7:9)';   f.P(f.wt, f.wt) = 1e-8*eye(3);
-% f.X(f.vt)  = measurement.True(1, 10:12)'; f.P(f.vt, f.vt) = 1e-8*eye(3);
-% f.X(f.at)  = measurement.True(1, 13:15)'; f.P(f.at, f.at) = 1e-8*eye(3);
-f.X(f.rbc) = [0.05 0.05 0.05]'; f.P(f.rbc, f.rbc) = 9e-4*eye(3);
+f.X(f.wt)  = measurement.True(1, 7:9)';   f.P(f.wt, f.wt) = 1e-8*eye(3);
+f.X(f.vt)  = measurement.True(1, 10:12)'; f.P(f.vt, f.vt) = 1e-8*eye(3);
+f.X(f.at)  = measurement.True(1, 13:15)'; f.P(f.at, f.at) = 1e-8*eye(3);
+% f.X(f.g0)  = [0 0 9.8]'; f.P(f.g0, f.g0) = eye(3);
+f.X(f.rbc) = [0.0 0.0 0.0]'; f.P(f.rbc, f.rbc) = 9e-4*eye(3);
 f.X(f.tbc) = [0.00; 0.00; -0.000]; f.P(f.tbc, f.tbc) = 9e-4*eye(3);
 
 % f.X(f.g0 ) = [0 0 9.8]';
@@ -33,7 +37,7 @@ f.X(f.tbc) = [0.00; 0.00; -0.000]; f.P(f.tbc, f.tbc) = 9e-4*eye(3);
 
 for i=1:N
     
-    comp = @(x, i) [x measurement.True(i,:)' x-measurement.True(i,:)' [1 1 1 2 2 2 3 3 3 4 4 4 5 5 5 6 6 6 7 7 7]'];
+    comp = @(x, i) [x measurement.True(i,:)' x-measurement.True(i,:)'];
     if measurement.Type(i) == 0
         w = measurement.Data(i, 1:3)';
         a = measurement.Data(i, 4:6)';
@@ -51,11 +55,14 @@ for i=1:N
             converge_flag = 0;
             for iter = 1:f.max_iter
                 Rsb = screw_exp(x(f.rsb));
-                w_pred = x(f.wt);
-                a_pred = Rsb'*x(f.at);
+                w_pred = x(f.wt); %+ x(f.wb);
+                a_pred = Rsb'*(x(f.at));% + x(f.ab); %-x(f.g0)
                
                 H(1:3, f.wt) = eye(3);
+%                 H(1:3, f.wb) = eye(3);
                 H(4:6, f.at) =  Rsb';
+%                 H(4:6, f.g0) = -Rsb';
+%                 H(4:6, f.ab) = eye(3);
                 H(4:6, f.rsb)=  Rsb'*so3_alg(x(f.at));
                 
                 y = [w - w_pred; a - a_pred] + H*dxp; % iekf innovation
@@ -71,7 +78,7 @@ for i=1:N
                     f.P = f.P - K*H*f.P;
                     converge_flag = 1;
 %                     comp_x = [extract_sub(x) measurement.True(i,:)' [1 1 1 2 2 2 3 3 3 4 4 4 5 5 5 6 6 6 7 7 7]'];
-             comp_x = comp(x, i); %IMU
+comp_x = comp(x, i); %IMU
                     break;
                 end
                 dxp = dx;
@@ -120,7 +127,7 @@ for i=1:N
                     f.X = x;
                     f.P = f.P - K*H*f.P;
                     converge_flag = 1;
-              comp_x = comp(x, i); % CAM
+                    comp_x = comp(x, i); % CAM
                     break;
                 end
                 dxp = dx;
@@ -138,36 +145,39 @@ for i=1:N
     tbc(:, i) = f.X(f.tbc);
 end
 
-subplot(3,2,1);
+subplot(3,3,1);
 plot(t, rx(1,:)'-measurement.True(:, 1), 'r', ...
      t, rx(2,:)'-measurement.True(:, 2), 'g', ...
      t, rx(3,:)'-measurement.True(:, 3), 'b'); title('rx');
  
-subplot(3,2,2);
+subplot(3,3,2);
 plot(t, tx(1,:)'-measurement.True(:, 4), 'r', ...
      t, tx(2,:)'-measurement.True(:, 5), 'g', ...
      t, tx(3,:)'-measurement.True(:, 6), 'b'); title('tx');
  
-subplot(3,2,3);
+subplot(3,3,3);
 plot(t, vt(1,:)'-measurement.True(:, 10), 'r', ...
      t, vt(2,:)'-measurement.True(:, 11), 'g', ...
      t, vt(3,:)'-measurement.True(:, 12), 'b'); title('vt');
-subplot(3,2,4);
+subplot(3,3,4);
 plot(t, at(1,:)'-measurement.True(:, 13), 'r', ...
      t, at(2,:)'-measurement.True(:, 14), 'g', ...
      t, at(3,:)'-measurement.True(:, 15), 'b'); title('at'); 
  
-subplot(3,2,5);
-% plot(t, vt(1,:)'-measurement.True(:, 10), 'r', ...
-%      t, vt(2,:)'-measurement.True(:, 11), 'g', ...
-%      t, vt(3,:)'-measurement.True(:, 12), 'b'); title('vt');
+subplot(3,3,5);
 plot(t, rbc(1, :), 'r', t, rbc(2,:), 'g', t, rbc(3,:)); title('rbc');
 
-subplot(3,2,6);
-% plot(t, wt(1,:)'-measurement.True(:, 7), 'r', ...
-%      t, wt(2,:)'-measurement.True(:, 8), 'g', ...
-%      t, wt(3,:)'-measurement.True(:, 9), 'b'); title('wt');
+subplot(3,3,6);
 plot(t, tbc(1, :), 'r', t, tbc(2,:), 'g', t, tbc(3,:)); title('tbc');
+
+% subplot(3,3,7);
+% plot(t, g0(1, :), 'r', t, g0(2,:), 'g', t, g0(3,:)); title('g0');
+
+% subplot(3,3,8);
+% plot(t, wb(1, :), 'r', t, wb(2,:), 'g', t, wb(3,:)); title('wb');
+% 
+% subplot(3,3,9);
+% plot(t, ab(1, :), 'r', t, ab(2,:), 'g', t, ab(3,:)); title('ab');
 end
 
 function [x] = extract_sub(x)

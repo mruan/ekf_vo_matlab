@@ -19,14 +19,14 @@ classdef ekf_autocalib
        rbc = 16:18; % orientation of camera in body(IMU) frame
        tbc = 19:21; % position    of camera in body(IMU) frame
 %        % IMU related
-%        g0  = 25:27; % gravity vector
-%        wb  = 28:30; % w-bias
-%        ab  = 31:33; % a-bias
+%        wb  = 22:24; % w-bias
+%        ab  = 25:27; % a-bias
+%        g0  = 28:30; % gravity vector
        nonSO3 = [4:15 19:21];
        N_states = 21;
        Rbc_mean = [1 0 0; 0 -1 0; 0 0 -1];
        max_iter = 10;
-       dx_threshold = 1e-6;
+       dx_threshold = 1e-16;
     end
     
     methods

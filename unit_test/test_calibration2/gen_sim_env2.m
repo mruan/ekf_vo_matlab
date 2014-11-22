@@ -30,8 +30,8 @@ Tbc = [0.01; 0.03; -0.003];
 g0 = [0 0 9.8]';
 
 % IMU bias parameters
-wb = [0 0 0]';
-ab = [0 0 0]';
+wb = [0 0 0]';%[0.05 0.12 0.23]';
+ab = [0 0 0]';%0.08 0.20 0.14]';
 
 % Measurement has 4 fields: Time, Type True and Data
 % Time(double): Time the observation becomes available
@@ -67,8 +67,8 @@ while imu_t < t_end || cam_t < t_end
        Td = get_Tdot(a, ad);
        TD = get_Tddot(a, ad, aD);
        
-       measurement.Data(end+1, :) = [wt; at]' + [wb; -Rb'*g0+ab]';
-       measurement.True(end+1, :) = [rb; Tb; wt; Td; TD; rbc; Tbc];
+       measurement.Data(end+1, :) = [wt; at]';% + [wb; ab]'; %-Rb'*g0+
+       measurement.True(end+1, :) = [rb; Tb; wt; Td; TD; rbc; Tbc];%;  wb; ab];
        measurement.Type(end+1) = 0;
        measurement.Time(end+1) = imu_t;
        
@@ -95,7 +95,7 @@ while imu_t < t_end || cam_t < t_end
         TD = get_Tddot(a, ad, aD);
         
         measurement.Data(end+1, :) = [rc; Tc]';
-        measurement.True(end+1, :) = [rb; Tb; wt; Td; TD; rbc; Tbc];
+        measurement.True(end+1, :) = [rb; Tb; wt; Td; TD; rbc; Tbc];%; wb; ab];
         measurement.Type(end+1) = 1;
         measurement.Time(end+1) = cam_t;
         
