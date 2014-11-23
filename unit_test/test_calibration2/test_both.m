@@ -22,14 +22,14 @@ wb = zeros(3, N);
 ab = zeros(3, N);
 
 f = ekf_autocalib();
-f.X(f.rsb) = measurement.True(1, 1:3)'; f.P(f.rsb, f.rsb) = 1e-2*eye(3);
-f.X(f.tsb) = measurement.True(1, 4:6)'; f.P(f.tsb, f.tsb) = 1e-2*eye(3);
+f.X(f.rsb) = measurement.True(1, 1:3)'; f.P(f.rsb, f.rsb) = 1e-0*eye(3);
+f.X(f.tsb) = measurement.True(1, 4:6)'; f.P(f.tsb, f.tsb) = 1e-0*eye(3);
 f.X(f.wt)  = measurement.True(1, 7:9)';   f.P(f.wt, f.wt) = 1e-8*eye(3);
-f.X(f.vt)  = measurement.True(1, 10:12)'; f.P(f.vt, f.vt) = 1e-8*eye(3);
-f.X(f.at)  = measurement.True(1, 13:15)'; f.P(f.at, f.at) = 1e-8*eye(3);
+% f.X(f.vt)  = measurement.True(1, 10:12)'; f.P(f.vt, f.vt) = 1e-8*eye(3);
+% f.X(f.at)  = measurement.True(1, 13:15)'; f.P(f.at, f.at) = 1e-8*eye(3);
 % f.X(f.g0)  = [0 0 9.8]'; f.P(f.g0, f.g0) = eye(3);
-f.X(f.rbc) = [0.0 0.0 0.0]'; f.P(f.rbc, f.rbc) = 9e-4*eye(3);
-f.X(f.tbc) = [0.00; 0.00; -0.000]; f.P(f.tbc, f.tbc) = 9e-4*eye(3);
+f.X(f.rbc) = [0.0 0.0 0.0]'; f.P(f.rbc, f.rbc) = 9e-2*eye(3);
+f.X(f.tbc) = [0.00; 0.00; -0.000]; f.P(f.tbc, f.tbc) = 9e-2*eye(3);
 
 % f.X(f.g0 ) = [0 0 9.8]';
 %f.wt  = measurement.True(1, 7:9)';
@@ -55,14 +55,14 @@ for i=1:N
             converge_flag = 0;
             for iter = 1:f.max_iter
                 Rsb = screw_exp(x(f.rsb));
-                w_pred = x(f.wt); %+ x(f.wb);
-                a_pred = Rsb'*(x(f.at));% + x(f.ab); %-x(f.g0)
+                w_pred = x(f.wt) + x(f.wb);
+                a_pred = Rsb'*(x(f.at)) + x(f.ab); %-x(f.g0)
                
                 H(1:3, f.wt) = eye(3);
-%                 H(1:3, f.wb) = eye(3);
+                H(1:3, f.wb) = eye(3);
                 H(4:6, f.at) =  Rsb';
 %                 H(4:6, f.g0) = -Rsb';
-%                 H(4:6, f.ab) = eye(3);
+                H(4:6, f.ab) = eye(3);
                 H(4:6, f.rsb)=  Rsb'*so3_alg(x(f.at));
                 
                 y = [w - w_pred; a - a_pred] + H*dxp; % iekf innovation
@@ -143,6 +143,8 @@ comp_x = comp(x, i); %IMU
     at(:,i) = f.X(f.at);
     rbc(:, i) = f.X(f.rbc);
     tbc(:, i) = f.X(f.tbc);
+    wb(:,i) = f.X(f.wb);
+    ab(:,i) = f.X(f.ab);
 end
 
 subplot(3,3,1);
@@ -173,11 +175,11 @@ plot(t, tbc(1, :), 'r', t, tbc(2,:), 'g', t, tbc(3,:)); title('tbc');
 % subplot(3,3,7);
 % plot(t, g0(1, :), 'r', t, g0(2,:), 'g', t, g0(3,:)); title('g0');
 
-% subplot(3,3,8);
-% plot(t, wb(1, :), 'r', t, wb(2,:), 'g', t, wb(3,:)); title('wb');
-% 
-% subplot(3,3,9);
-% plot(t, ab(1, :), 'r', t, ab(2,:), 'g', t, ab(3,:)); title('ab');
+subplot(3,3,8);
+plot(t, wb(1, :), 'r', t, wb(2,:), 'g', t, wb(3,:)); title('wb');
+
+subplot(3,3,9);
+plot(t, ab(1, :), 'r', t, ab(2,:), 'g', t, ab(3,:)); title('ab');
 end
 
 function [x] = extract_sub(x)
