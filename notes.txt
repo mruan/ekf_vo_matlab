@@ -1,0 +1,4 @@
+11/23/14
+3:18pm: in 'w_only_test.m', covariance update uses P = P-K*H*P instead of P=P-K*S*K as suggested in Mirzaei paper. Now the error stays WELL within the error bound.
+
+ 
