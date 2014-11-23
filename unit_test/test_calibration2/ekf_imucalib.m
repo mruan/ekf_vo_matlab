@@ -13,9 +13,9 @@ classdef ekf_imucalib
        at  = 13:15;
        wb  = 16:18;
        ab  = 19:21;
-%        g0  = 22:24;
-       nonSO3 = [4:21];
-       N_states = 21;
+       g0  = 22:24;
+       nonSO3 = [4:24];
+       N_states = 24;
        max_iter = 20;
        dx_threshold = 1e-6;
     end
@@ -42,13 +42,13 @@ classdef ekf_imucalib
             for iter = 1: f.max_iter
                Rsb = screw_exp(x(f.rsb));
                w_pred = x(f.wt) + x(f.wb);
-               a_pred = Rsb'*(x(f.at) ) + x(f.ab); % - x(f.g0)
+               a_pred = Rsb'*(x(f.at) ) + x(f.ab)-Rsb'* x(f.g0); % 
                
                H(1:3, f.wt) = eye(3);
                H(1:3, f.wb) = eye(3);
                H(4:6, f.at) = Rsb';
-%                H(4:6, f.g0) =-Rsb';
-               H(4:6, f.rsb)= Rsb'*so3_alg(x(f.at)); %-f.g0
+               H(4:6, f.g0) =-Rsb';
+               H(4:6, f.rsb)= Rsb'*so3_alg(x(f.at)-x(f.g0)); %
                H(4:6, f.ab) = eye(3);
                
                y = [w - w_pred; a - a_pred] + H*px;
@@ -59,13 +59,13 @@ classdef ekf_imucalib
                
                x = f.states_add(dx, X_h);
                if max(abs(dx - px)) < f.dx_threshold
-                   X = x;
-                   P = P_h - K*H*P_h;
 %                    P = p - K*S*K';
                    break;
                end
                px = dx;
             end
+            X = x;
+            P = P_h - K*H*P_h;
         end
 
         %{
@@ -155,15 +155,15 @@ classdef ekf_imucalib
             noise_na = 10*eye(3);
             noise_nwb = .1*eye(3);
             noise_nab = .1*eye(3);
-%             noise_ng0 = 1*eye(3);
-            Q = blkdiag(noise_nw, noise_na, noise_nwb, noise_nab);  % , noise_ng0
+            noise_ng0 = .1*eye(3);
+            Q = blkdiag(noise_nw, noise_na, noise_nwb, noise_nab, noise_ng0);  %
             % n = [nw; na; nwb; nab; ng0]
             G = zeros(f.N_states, 12);
             G(f.wt, 1:3) = eye(3)*dt;
             G(f.at, 4:6) = eye(3)*dt;
             G(f.wb, 7:9) = eye(3)*dt;
             G(f.ab, 10:12) = eye(3)*dt;
-%             G(f.g0, 13:15) = eye(3)*dt;
+            G(f.g0, 13:15) = eye(3)*dt;
             
             P_h = F*P*F' + G*Q*G';
         end

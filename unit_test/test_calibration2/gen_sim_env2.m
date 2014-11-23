@@ -68,7 +68,7 @@ while imu_t < t_end || cam_t < t_end
        TD = get_Tddot(a, ad, aD);
        
        measurement.Data(end+1, :) = [wt; at]';% + [wb; ab]'; %-Rb'*g0+
-       measurement.True(end+1, :) = [rb; Tb; wt; Td; TD; rbc; Tbc];%;  wb; ab];
+       measurement.True(end+1, :) = [rb; Tb; wt; Td; TD; rbc; Tbc; wb; ab];
        measurement.Type(end+1) = 0;
        measurement.Time(end+1) = imu_t;
        
@@ -95,7 +95,7 @@ while imu_t < t_end || cam_t < t_end
         TD = get_Tddot(a, ad, aD);
         
         measurement.Data(end+1, :) = [rc; Tc]';
-        measurement.True(end+1, :) = [rb; Tb; wt; Td; TD; rbc; Tbc];%; wb; ab];
+        measurement.True(end+1, :) = [rb; Tb; wt; Td; TD; rbc; Tbc; wb; ab];
         measurement.Type(end+1) = 1;
         measurement.Time(end+1) = cam_t;
         

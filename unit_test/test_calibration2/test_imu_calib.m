@@ -54,7 +54,7 @@ for i=1:N
     log_P(:,i) = sqrt(diag(P));
 end
 
-idx = 100:N;
+idx = 1:N;
 subplot(4,2,1); plot_one(t(idx), log_X(f.rsb,idx), log_P(f.rsb,idx), 'rx');
 subplot(4,2,2); plot_one(t(idx), log_X(f.tsb,idx), log_P(f.tsb,idx), 'tx');
 subplot(4,2,3); plot_one(t(idx), log_X(f.wt, idx), log_P(f.wt, idx), 'wt');
@@ -62,6 +62,7 @@ subplot(4,2,4); plot_one(t(idx), log_X(f.vt, idx), log_P(f.vt, idx), 'vt');
 subplot(4,2,5); plot_one(t(idx), log_X(f.at, idx), log_P(f.at, idx), 'at');
 subplot(4,2,6); plot_one(t(idx), log_X(f.wb, idx), log_P(f.wb, idx), 'wb');
 subplot(4,2,7); plot_one(t(idx), log_X(f.ab, idx), log_P(f.ab, idx), 'ab');
+subplot(4,2,8); plot_one(t(idx), log_X(f.g0, idx), log_P(f.g0, idx), 'g0');
 end
 
 function [] = plot_one(t, x, p, name)
