@@ -7,7 +7,7 @@
 function [f] = test_imu_calib()
 dbstop if error;
 
-load('sim_env3.mat'); % measurement
+load('sim_env_imu.mat'); % measurement
 addpath('../../lie_group');
 
 t = measurement.Time;
@@ -19,14 +19,6 @@ P = 100*eye(f.N_states);
 log_X = zeros(f.N_states, N);
 log_P = zeros(f.N_states, N);
 
-% f.X(f.rsb) = measurement.True(1, 1:3)'; f.P(f.rsb, f.rsb) = 1e-0*eye(3);
-% f.X(f.tsb) = measurement.True(1, 4:6)'; f.P(f.tsb, f.tsb) = 1e-0*eye(3);
-% f.X(f.wt)  = measurement.True(1, 7:9)'; f.P(f.wt, f.wt) = 1e-0*eye(3);
-% % f.X(f.vt)  = measurement.True(1, 10:12)'; f.P(f.vt, f.vt) = 1e-8*eye(3);
-% % f.X(f.at)  = measurement.True(1, 13:15)'; f.P(f.at, f.at) = 1e-8*eye(3);
-% % f.X(f.g0)  = [0 0 9.8]'; f.P(f.g0, f.g0) = eye(3);
-% f.X(f.wb) = [0.0 0.0 0.0]'; f.P(f.wb, f.wb) = 9e-2*eye(3);
-% f.X(f.ab) = [0.0 0.0 0.0]'; f.P(f.ab, f.ab) = 9e-2*eye(3);
 t_prev= 0;
 for i=1:N
     t_now = t(i);
@@ -71,23 +63,3 @@ plot(t, x(1,:), 'r',   t, x(2,:), 'g',   t, x(2,:), 'b',...
      t,-p(1,:), 'r-.', t,-p(2,:), 'g-.', t,-p(3,:), 'b-.'); title(name);
  
 end
-function [x] = extract_sub(x)
-   x = x([1:12 16:18 19:24]);
-end
-% subplot(3,1,1);
-% plot(t, measurement.True(:, 1), 'r', ...
-%      t, measurement.True(:, 2), 'g', ...
-%      t, measurement.True(:, 3), 'b'); hold on;
-% plot(t, rx(1,:), 'r-.', t, rx(2,:), 'g-.', t, rx(3,:), 'b-.'); hold off;
-% 
-% subplot(3,1,2);
-% plot(t, measurement.True(:, 4), 'r', ...
-%      t, measurement.True(:, 5), 'g', ...
-%      t, measurement.True(:, 6), 'b'); hold on;
-% plot(t, tx(1,:), 'r-.', t, tx(2,:), 'g-.', t, tx(3,:), 'b-.'); hold off;
-% 
-% subplot(3,1,3);
-% plot(t, measurement.True(:, 10), 'r', ...
-%      t, measurement.True(:, 11), 'g', ...
-%      t, measurement.True(:, 12), 'b'); hold on;
-% plot(t, vt(1,:), 'r-.', t, vt(2,:), 'g-.', t, vt(3,:), 'b-.'); hold off;

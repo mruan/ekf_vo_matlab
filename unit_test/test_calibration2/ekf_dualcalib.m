@@ -19,11 +19,11 @@ classdef ekf_dualcalib
        nonSO3 = [4:24 28:30];
        N_states = 30;
        max_iter = 20;
-       dx_threshold = 1e-6;
+       dx_threshold = 1e-4;
     end
     
     methods
-        function [f] = ekf_imucalib()
+        function [f] = ekf_dualcalib()
 %             f.X   = zeros(f.N_states, 1);
 %             f.P   = 100*eye(f.N_states);
 % 
@@ -61,7 +61,6 @@ classdef ekf_dualcalib
                
                x = f.states_add(dx, X_h);
                if max(abs(dx - px)) < f.dx_threshold
-%                    P = p - K*S*K';
                    break;
                end
                px = dx;
@@ -71,36 +70,47 @@ classdef ekf_dualcalib
         end
 
         %{
-        y_cam = [  rx  ]
-                [  tx  ]
+        y_cam = [  rsc  ]
+                [  tsc  ]
+        where
+        rsc = screw_log(screw_exp(rsb)*screw_exp(rbc))
+        tsc = screw_exp(rsb)*tbc + tsb
         %}
-        function [X, P] = onOmnUpdate(f, rx, tx, omni_noise, X_h, P_h)
+        function [X, P] = onCamUpdate(f, rsc, tsc, cam_noise, X_h, P_h)
             % Propagate to current time step
             x = X_h;
 
             dx = zeros(f.N_states, 1);
             px = dx;
             H  = zeros(6, f.N_states);
+            Rsc_obsv = screw_exp(rsc);
             for iter = 1: f.max_iter
+               Rsb = screw_exp(x(f.rsb));
+               
+               Rsc_pred = Rsb*screw_exp(x(f.rbc));
+               tsc_pred = Rsb*x(f.tbc) + x(f.tsb);
                
                H(1:3, f.rsb) = eye(3);
+               H(1:3, f.rbc) = Rsb;
+               H(4:6, f.rsb) = -so3_alg(Rsb*x(f.tbc));
                H(4:6, f.tsb) = eye(3);
-
-               y = [screw_add(rx, -x(f.rsb)); tx - x(f.tsb)] + H*px;
+               H(4:6, f.tbc) = Rsb;
                
-               S = H*P_h*H' + omni_noise;
+               y = [screw_log(Rsc_obsv*Rsc_pred'); tsc - tsc_pred] + H*px;
+               
+               S = H*P_h*H' + cam_noise;
                K = P_h*H'/S;
                dx= K*y;
                
                x = f.states_add(dx, X_h);
                if max(abs(dx - px)) < f.dx_threshold
-                   X = x;
-                   P = P_h - K*H*P_h;
 %                    f.P = p - K*S*K';
                    break;
                end
                px = dx;
             end
+            X = x;
+            P = P_h - K*H*P_h;
         end
         
         function [X_h, P_h] = propagate(f, X, P, dt)

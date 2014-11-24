@@ -24,7 +24,7 @@ Rbc = [1  0  0;...
        0 -1  0;...
        0  0 -1]; % rbc -> [pi 0 0];
 rbc = [0.0 0.0 0.0]';
-Tbc = [0.01; 0.03; -0.003];     
+tbc = [0.01; 0.03; -0.003];     
 
 % Gravity vector
 g0 = [0 0 -9.8]';
@@ -94,7 +94,7 @@ while imu_t < t_end || omn_t < t_end
     
 end
 
-save('sim_env3.mat', 'measurement');
+save('sim_env_imu.mat', 'measurement');
 
 % angle parameter and its time derivatives
 function [a, a_dot, a_ddot] = time2param(t)

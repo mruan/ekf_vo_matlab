@@ -13,7 +13,7 @@ function [measurement] = gen_sim_dualcalib( )
 dbstop if error
 
 %dt = 0.01;  % 100 Hz
-t_end = 30; % 60 seconds
+t_end = 10; % 60 seconds
 % time_series = 0:dt:t_end;
 
 % Trajecotry control paramters:
@@ -23,8 +23,8 @@ r = 1;
 Rbc = [1  0  0;...
        0 -1  0;...
        0  0 -1]; % rbc -> [pi 0 0];
-rbc = scew_log(Rbc);
-Tbc = [0.01; 0.03; -0.003];     
+rbc = screw_log(Rbc);
+tbc = [0.01; 0.03; -0.003];     
 
 % Gravity vector
 g0 = [0 0 -9.8]';
@@ -98,7 +98,7 @@ while imu_t < t_end || cam_t < t_end
     
 end
 
-save('sim_env3.mat', 'measurement');
+save('sim_env_dual.mat', 'measurement');
 
 % angle parameter and its time derivatives
 function [a, a_dot, a_ddot] = time2param(t)
