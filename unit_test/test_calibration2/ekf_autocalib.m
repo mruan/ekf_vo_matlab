@@ -19,11 +19,11 @@ classdef ekf_autocalib
        rbc = 16:18; % orientation of camera in body(IMU) frame
        tbc = 19:21; % position    of camera in body(IMU) frame
 %        % IMU related
-%        wb  = 22:24; % w-bias
-%        ab  = 25:27; % a-bias
+       wb  = 22:24; % w-bias
+       ab  = 25:27; % a-bias
 %        g0  = 28:30; % gravity vector
-       nonSO3 = [4:15 19:21];
-       N_states = 21;
+       nonSO3 = [4:15 19:27];
+       N_states = 27;
        Rbc_mean = [1 0 0; 0 -1 0; 0 0 -1];
        max_iter = 10;
        dx_threshold = 1e-16;
@@ -111,7 +111,7 @@ classdef ekf_autocalib
                 
                 H(1:3, f.idx_rsb) = eye(3);
                 H(1:3, f.idx_rbc) = Rsb;
-                H(4:6, f.idx_rsb) = so3_alg(-Rsb*f.tbc);
+                H(4:6, f.idx_rsb) = so3_alg(-Rsb*x(f.tbc));
                 H(4:6, f.idx_tbc) = Rsb;
                 H(4:6, f.idx_tsb)=  eye(3);
                 
@@ -182,8 +182,8 @@ classdef ekf_autocalib
             wt_noise = 100*dt;
             at_noise = 100*dt;
             g0_noise = 1*dt;
-            wb_noise = 1*dt;
-            ab_noise = 1*dt;
+            wb_noise = 0*dt;
+            ab_noise = 0*dt;
             rbc_noise= 0*dt;
             tbc_noise= 0*dt;
             Q_prop = sparse(zeros(f.N_states));
@@ -193,8 +193,8 @@ classdef ekf_autocalib
             Q_prop(f.rbc,f.rbc)=rbc_noise*eye3;
             Q_prop(f.tbc,f.tbc)=tbc_noise*eye3;
 %             Q_prop(f.g0, f.g0) = g0_noise*eye3;
-%             Q_prop(f.wb, f.wb) = wb_noise*eye3;
-%             Q_prop(f.ab, f.ab) = ab_noise*eye3;
+            Q_prop(f.wb, f.wb) = wb_noise*eye3;
+            Q_prop(f.ab, f.ab) = ab_noise*eye3;
             
             f.P = F*(f.P + Q_prop)*F';
             f.time_stamp = new_time;

@@ -1,4 +1,4 @@
-classdef ekf_imucalib
+classdef ekf_dualcalib
     %EKF_CT_CALIB Summary of this class goes here
     %   Detailed explanation goes here
     
@@ -14,8 +14,10 @@ classdef ekf_imucalib
        wb  = 16:18;
        ab  = 19:21;
        g0  = 22:24;
-       nonSO3 = [4:24];
-       N_states = 24;
+       rbc = 25:27;
+       tbc = 28:30;
+       nonSO3 = [4:24 28:30];
+       N_states = 30;
        max_iter = 20;
        dx_threshold = 1e-6;
     end
@@ -69,7 +71,7 @@ classdef ekf_imucalib
         end
 
         %{
-        y_omn = [  rx  ]
+        y_cam = [  rx  ]
                 [  tx  ]
         %}
         function [X, P] = onOmnUpdate(f, rx, tx, omni_noise, X_h, P_h)
@@ -158,7 +160,7 @@ classdef ekf_imucalib
             noise_ng0 = .1*eye(3);
             Q = blkdiag(noise_nw, noise_na, noise_nwb, noise_nab, noise_ng0);  %
             % n = [nw; na; nwb; nab; ng0]
-            G = zeros(f.N_states, 15);
+            G = zeros(f.N_states, 12);
             G(f.wt, 1:3) = eye(3)*dt;
             G(f.at, 4:6) = eye(3)*dt;
             G(f.wb, 7:9) = eye(3)*dt;
