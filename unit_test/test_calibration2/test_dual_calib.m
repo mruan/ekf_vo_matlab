@@ -14,12 +14,15 @@ t = measurement.Time;
 N = numel(t);
 
 f = ekf_dualcalib();
-X = zeros(f.N_states,1);
+X = measurement.True(1,:)';%zeros(f.N_states,1);
 P = 100*eye(f.N_states);
 
 %% Initialize the relative pose of the camera in body frame
 X(f.rbc) = [pi; 0; 0]; P(f.rbc, f.rbc) = 0.0025*eye(3);
 X(f.tbc) = [0; 0; 0];  P(f.tbc, f.tbc) = 0.0025*eye(3);
+% X(f.wb ) = [0 0 0]';   P(f.wb, f.wb) = 0.01*eye(3);
+% X(f.ab ) = [0 0 0]';   P(f.ab, f.ab) = 0.01*eye(3);
+% X(1:6) = measurement.True(1,1:6)';
 
 log_X = zeros(f.N_states, N);
 log_P = zeros(f.N_states, N);
@@ -51,7 +54,7 @@ for i=1:N
     log_P(:,i) = sqrt(diag(P));
 end
 
-idx = 1:N;
+idx = 100:N;
 subplot(5,2,1); plot_one(t(idx), log_X(f.rsb,idx), log_P(f.rsb,idx), 'rsb');
 subplot(5,2,2); plot_one(t(idx), log_X(f.tsb,idx), log_P(f.tsb,idx), 'tsb');
 subplot(5,2,3); plot_one(t(idx), log_X(f.wt, idx), log_P(f.wt, idx), 'wt');

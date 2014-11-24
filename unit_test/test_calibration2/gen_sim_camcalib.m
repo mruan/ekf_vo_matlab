@@ -91,7 +91,7 @@ while imu_t < t_end || cam_t < t_end
     
 end
 
-save('sim_env4.mat', 'measurement');
+save('sim_env_cam.mat', 'measurement');
 
 % angle parameter and its time derivatives
 function [a, a_dot, a_ddot] = time2param(t)

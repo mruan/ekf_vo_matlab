@@ -7,7 +7,7 @@
 function [f] = test_cam_calib()
 dbstop if error;
 
-load('sim_env4.mat'); % measurement
+load('sim_env_cam.mat'); % measurement
 addpath('../../lie_group');
 
 t = measurement.Time;
@@ -51,7 +51,7 @@ for i=1:N
     log_P(:,i) = sqrt(diag(P));
 end
 
-idx = 1:N;
+idx = 10:N;
 subplot(4,2,1); plot_one(t(idx), log_X(f.rsb,idx), log_P(f.rsb,idx), 'rsb');
 subplot(4,2,2); plot_one(t(idx), log_X(f.tsb,idx), log_P(f.tsb,idx), 'tsb');
 subplot(4,2,3); plot_one(t(idx), log_X(f.wt, idx), log_P(f.wt, idx), 'wt');

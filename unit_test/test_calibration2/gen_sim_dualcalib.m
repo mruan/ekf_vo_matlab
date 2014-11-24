@@ -13,7 +13,7 @@ function [measurement] = gen_sim_dualcalib( )
 dbstop if error
 
 %dt = 0.01;  % 100 Hz
-t_end = 10; % 60 seconds
+t_end = 30; % 60 seconds
 % time_series = 0:dt:t_end;
 
 % Trajecotry control paramters:

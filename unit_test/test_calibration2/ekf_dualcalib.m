@@ -124,64 +124,70 @@ classdef ekf_dualcalib
             R = screw_exp(X(f.rsb));
             X_h(f.rsb) = screw_log(R*screw_exp(X(f.wt)*dt));
             X_h(f.tsb) = X(f.tsb) + X(f.vt)*dt;
-            X_h(f.wt)  = X(f.wt);
             X_h(f.vt)  = X(f.vt)  + X(f.at)*dt;
-            X_h(f.at)  = X(f.at);
-            X_h(f.wb)  = X(f.wb);
-            X_h(f.ab)  = X(f.ab);
             
             %{
               Linearized model:
               dX = (I+F*dt)*X + (G*dt)*n
             
-                 rsb tsb   wt   vt   at   wb   ab  g0
-               F =
-                 [0   0    R    0    0    0    0   0 ]
-                 [0   0    0    I    0    0    0   0 ]
-                 [0   0    0    0    I    0    0   0 ]
-                 [0   0    0    0    0    0    0   0 ]
-                 [0   0    0    0    0    0    0   0 ]
-                 [0   0    0    0    0    0    0   0 ]
-                 [0   0    0    0    0    0    0   0 ]
-                 [0   0    0    0    0    0    0   0 ]
-                
-                 nw; na;  nwb; nab; ng0  
-               G =
-                 [0   0    0    0    0 ]
-                 [0   0    0    0    0 ]
-                 [I   0    0    0    0 ]
-                 [0   0    0    0    0 ]
-                 [0   I    0    0    0 ]
-                 [0   0    I    0    0 ]
-                 [0   0    0    I    0 ]
-                 [0   0    0    0    I ]
-                
-            Note: Rd2t = R*dt^2/2, Id2t = I*dt^2/2
+                 rsb tsb   wt   vt   at   wb   ab   g0 rbc tbc
+             F =
+             rsb [0   0    R    0    0    0    0    0   0   0]
+             tsb [0   0    0    I    0    0    0    0   0   0]
+              wt [0   0    0    0    0    0    0    0   0   0]
+              vt [0   0    0    0    I    0    0    0   0   0]
+              at [0   0    0    0    0    0    0    0   0   0]
+              wb [0   0    0    0    0    0    0    0   0   0]
+              ab [0   0    0    0    0    0    0    0   0   0]
+              g0 [0   0    0    0    0    0    0    0   0   0]
+             rbc [0   0    0    0    0    0    0    0   0   0]
+             tbc [0   0    0    0    0    0    0    0   0   0]
             %}
             F = eye(f.N_states);
             F(f.rsb, f.wt) = R*dt;
             F(f.tsb, f.vt) = eye(3)*dt;
             F(f.vt,  f.at) = eye(3)*dt;
             
-            noise_nw = 10*eye(3);
-            noise_na = 10*eye(3);
-            noise_nwb = .1*eye(3);
-            noise_nab = .1*eye(3);
-            noise_ng0 = .1*eye(3);
-            Q = blkdiag(noise_nw, noise_na, noise_nwb, noise_nab, noise_ng0);  %
-            % n = [nw; na; nwb; nab; ng0]
-            G = zeros(f.N_states, 12);
+            %{
+                            
+                 nw  na   nwb  nab  ng0  rbc  tbc 
+             G =
+             rsb [0   0    0    0    0    0   0]
+             tsb [0   0    0    0    0    0   0]
+              wt [I   0    0    0    0    0   0]
+              vt [0   0    0    0    0    0   0]
+              at [0   I    0    0    0    0   0]
+              wb [0   0    I    0    0    0   0]
+              ab [0   0    0    I    0    0   0]
+              g0 [0   0    0    0    I    0   0]
+             rbc [0   0    0    0    0    I   0]
+             tbc [0   0    0    0    0    0   I]
+            %}
+            G = zeros(f.N_states, 21);
             G(f.wt, 1:3) = eye(3)*dt;
             G(f.at, 4:6) = eye(3)*dt;
             G(f.wb, 7:9) = eye(3)*dt;
             G(f.ab, 10:12) = eye(3)*dt;
             G(f.g0, 13:15) = eye(3)*dt;
+            G(f.rbc, 16:18) = eye(3)*dt;
+            G(f.tbc, 19:21) = eye(3)*dt;
             
+            noise_nw = 10*eye(3);
+            noise_na = 1*eye(3);
+            noise_nwb = .1*eye(3);
+            noise_nab = .1*eye(3);
+            noise_ng0 = .1*eye(3);
+            noise_nrbc = .01*eye(3);
+            noise_ntbc = .01*eye(3);
+            Q = blkdiag(noise_nw, noise_na, noise_nwb, noise_nab, noise_ng0, noise_nrbc, noise_ntbc);
+            % n = [nw; na; nwb; nab; ng0]
+
             P_h = F*P*F' + G*Q*G';
         end
         
         function [x] = states_add(f, dx, x)
            x(f.rsb) = screw_add(dx(f.rsb), x(f.rsb));
+           x(f.rbc) = screw_add(dx(f.rbc), x(f.rbc));
            x(f.nonSO3) = dx(f.nonSO3) + x(f.nonSO3); 
         end
     end
