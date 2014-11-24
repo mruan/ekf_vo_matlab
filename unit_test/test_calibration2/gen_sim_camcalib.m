@@ -13,7 +13,7 @@ function [measurement] = gen_sim_camcalib( )
 dbstop if error
 
 %dt = 0.01;  % 100 Hz
-t_end = 30; % 60 seconds
+t_end = 10; % 60 seconds
 % time_series = 0:dt:t_end;
 
 % Trajecotry control paramters:
@@ -33,7 +33,7 @@ tbc = [0.01; 0.03; -0.003];
 % True(15x1)  : [rx(1-3) tx(4-6) wt(7-9) Td(10-12) Tdd(13-15)]
 
 IMU_DT = 0.01;
-CAM_DT = 1/30;
+CAM_DT = 0.01;
 
 measurement.True = [];
 measurement.Type = [];

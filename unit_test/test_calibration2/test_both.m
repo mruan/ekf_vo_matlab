@@ -4,7 +4,7 @@
 % position drift with time.
 
 %clear;
-function [f] = test_imu_calib()
+function [f] = test_both()
 load('sim_env2.mat'); % measurement
 addpath('../../lie_group');
 

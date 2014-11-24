@@ -24,14 +24,6 @@ X(f.tbc) = [0; 0; 0];  P(f.tbc, f.tbc) = 0.0025*eye(3);
 log_X = zeros(f.N_states, N);
 log_P = zeros(f.N_states, N);
 
-% f.X(f.rsb) = measurement.True(1, 1:3)'; f.P(f.rsb, f.rsb) = 1e-0*eye(3);
-% f.X(f.tsb) = measurement.True(1, 4:6)'; f.P(f.tsb, f.tsb) = 1e-0*eye(3);
-% f.X(f.wt)  = measurement.True(1, 7:9)'; f.P(f.wt, f.wt) = 1e-0*eye(3);
-% % f.X(f.vt)  = measurement.True(1, 10:12)'; f.P(f.vt, f.vt) = 1e-8*eye(3);
-% % f.X(f.at)  = measurement.True(1, 13:15)'; f.P(f.at, f.at) = 1e-8*eye(3);
-% % f.X(f.g0)  = [0 0 9.8]'; f.P(f.g0, f.g0) = eye(3);
-% f.X(f.wb) = [0.0 0.0 0.0]'; f.P(f.wb, f.wb) = 9e-2*eye(3);
-% f.X(f.ab) = [0.0 0.0 0.0]'; f.P(f.ab, f.ab) = 9e-2*eye(3);
 t_prev= 0;
 for i=1:N
     t_now = t(i);
